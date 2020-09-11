@@ -1,12 +1,73 @@
 resources:
-  - name: booklit
+  - name: concourse-playground
     type: git
-    source: {uri: "https://github.com/budgiewatts/concourse-playground"}
+    source: {uri: "https://github.com/BudgieWatts/concourse-playground"}
 
 jobs:
-  - name: unit
+  - name: build
     plan:
-      - get: booklit
+      - get: concourse-playground
         trigger: true
-      - task: test
-        file: booklit/ci/test.yml
+      - task: build
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: openjdk
+              tag: 11-jdk-stretch
+          inputs:
+            - name: concourse-playground
+          outputs:
+            - name: artifact
+          params:
+            ENV_VAR: foo
+          run:
+            path: bash
+            args:
+            - -c
+            - |
+              cd concourse-playground
+              ./gradlew bootJar
+              ls -l build/libs/concourse-playground-0.0.1-SNAPSHOT.jar
+              cp build/libs/concourse-playground-0.0.1-SNAPSHOT.jar ../artifact
+        on_failure:
+          do:
+            - task: ermergerd it failed
+              config:
+                platform: linux
+                image_resource:
+                  type: docker-image
+                  source:
+                    repository: openjdk
+                    tag: 11-jdk-stretch
+                inputs:
+                  - name: concourse-playground
+                outputs:
+                  - name: artifact
+                run:
+                  path: bash
+                  args:
+                  - -c
+                  - |
+                    ls -l
+      - task: run
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: openjdk
+              tag: 11-jdk-stretch
+          inputs:
+            - name: artifact
+          run:
+            path: bash
+            args:
+              - -c
+              - |
+                ls -l
+                cd artifact
+                ls -l
+                java -jar concourse-playground-0.0.1-SNAPSHOT.jar
+
