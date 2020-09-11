@@ -1,0 +1,12 @@
+resources:
+  - name: booklit
+    type: git
+    source: {uri: "https://github.com/budgiewatts/concourse-playground"}
+
+jobs:
+  - name: unit
+    plan:
+      - get: booklit
+        trigger: true
+      - task: test
+        file: booklit/ci/test.yml
